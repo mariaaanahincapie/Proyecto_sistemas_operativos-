@@ -1,0 +1,19 @@
+# Compilación
+build/
+cmake-build-*/
+bin/*
+!bin/.gitkeep
+
+# Ejecutables y objetos
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
