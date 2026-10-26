@@ -1,5 +1,0 @@
-# Ejemplo ilustrativo; confirma el formato con la guía antes de usarlo.
-# Formato: <cola_de_entrada> <tipo_B_D_S> <cantidad>
-0 B 2
-1 D 1
-2 S 3
