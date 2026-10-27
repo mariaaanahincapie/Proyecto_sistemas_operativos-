@@ -466,6 +466,7 @@ El mecanismo de apagado ordenado todavía debe especificarse.
 ## 12. Integrantes
 
 - Integrante 1: Mariana Hincapié Henao 
-- Integrante 2: 
+- Integrante 2: Martin Caballero
+  
 
 
