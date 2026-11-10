@@ -1,42 +1,65 @@
-# Makefile del proyecto evaluador (C++17, Linux)
-# Compila solo los programas cuyo archivo principal ya existe.
+# Makefile del proyecto evaluador (C++17). Linux con g++ o clang++.
+# En Windows use CMake (ver Install.md) o:  make OS_WIN=1 CXX=x86_64-w64-mingw32-g++
+#
+#   make            compila todo en bin/
+#   make test       ejecuta las pruebas automáticas (tests/run_tests.sh)
+#   make install PREFIX=/ruta    instala en otro directorio
+#   make clean
 
 CXX      ?= g++
-CXXFLAGS ?= -std=c++17 -Wall -Wextra -O2 -pthread
-LDLIBS   ?= -lrt -pthread
+CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -Wpedantic
+CPPFLAGS += -Isrc
 BIN      := bin
+OBJ      := build/obj
 
-COMMON := $(wildcard src/shared/*.cpp src/queues/*.cpp src/concurrency/*.cpp)
+ifdef OS_WIN
+EXE      := .exe
+LDLIBS   := -static -pthread
+CPPFLAGS += -DNOMINMAX -DWIN32_LEAN_AND_MEAN
+else
+EXE      :=
+LDLIBS   := -pthread -lrt
+endif
 
-# programa -> archivo principal
-MAINS := evaluator:src/main/evaluator.cpp \
-         evaluator-init:src/evaluator/init.cpp \
-         evaluator-reg:src/registration/reg.cpp \
-         evaluator-ctrl:src/main/ctrl.cpp \
-         evaluator-rep:src/output/rep.cpp
+# Código común a todos los programas
+COMMON_SRC := src/shared/platform.cpp src/shared/shm.cpp \
+              src/concurrency/semaphore.cpp src/queues/ring.cpp
+COMMON_OBJ := $(COMMON_SRC:src/%.cpp=$(OBJ)/%.o)
 
-TARGETS := $(foreach m,$(MAINS),$(if $(wildcard $(word 2,$(subst :, ,$(m)))),$(BIN)/$(word 1,$(subst :, ,$(m)))))
+PROGRAMS := $(BIN)/evaluator$(EXE) $(BIN)/evaluator-init$(EXE) $(BIN)/evaluator-reg$(EXE) \
+            $(BIN)/evaluator-ctrl$(EXE) $(BIN)/evaluator-rep$(EXE)
 
-.PHONY: all clean install
-all: $(TARGETS)
-	@if [ -z "$(TARGETS)" ]; then echo "Aun no hay codigo fuente que compilar."; fi
+.PHONY: all clean install test
+all: $(PROGRAMS)
 
-$(BIN)/evaluator: src/main/evaluator.cpp $(COMMON)
+$(OBJ)/%.o: src/%.cpp $(wildcard src/*/*.hpp)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+# Envoltorio (wrapper) y programas reales
+$(BIN)/evaluator$(EXE): $(OBJ)/main/evaluator.o $(COMMON_OBJ)
+	@mkdir -p $(BIN)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDLIBS)
-$(BIN)/evaluator-init: src/evaluator/init.cpp $(wildcard src/evaluator/*.cpp) $(COMMON)
-	$(CXX) $(CXXFLAGS) $(sort $^) -o $@ $(LDLIBS)
-$(BIN)/evaluator-reg: src/registration/reg.cpp $(COMMON)
+$(BIN)/evaluator-init$(EXE): $(OBJ)/evaluator/init.o $(OBJ)/evaluator/evaluator.o $(COMMON_OBJ)
+	@mkdir -p $(BIN)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDLIBS)
-$(BIN)/evaluator-ctrl: src/main/ctrl.cpp $(COMMON)
+$(BIN)/evaluator-reg$(EXE): $(OBJ)/registration/reg.o $(COMMON_OBJ)
+	@mkdir -p $(BIN)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDLIBS)
-$(BIN)/evaluator-rep: src/output/rep.cpp $(COMMON)
+$(BIN)/evaluator-ctrl$(EXE): $(OBJ)/main/ctrl.o $(COMMON_OBJ)
+	@mkdir -p $(BIN)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDLIBS)
+$(BIN)/evaluator-rep$(EXE): $(OBJ)/output/rep.o $(COMMON_OBJ)
+	@mkdir -p $(BIN)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDLIBS)
+
+test: all
+	bash tests/run_tests.sh
 
 clean:
-	rm -f $(BIN)/evaluator $(BIN)/evaluator-*
+	rm -rf build $(BIN)/evaluator $(BIN)/evaluator-* $(BIN)/*.exe
 
-# make install PREFIX=/ruta/destino
 PREFIX ?= /usr/local
 install: all
 	install -d $(PREFIX)/bin
-	install -m 755 $(BIN)/evaluator* $(PREFIX)/bin/
+	install -m 755 $(PROGRAMS) $(PREFIX)/bin/

@@ -2,36 +2,60 @@
 
 ## Requisitos
 
-- Linux (o Windows, ver `doc/01-arquitectura.md`)
-- g++ con C++17 (versión 9 o superior) o clang++
-- `make` (o CMake 3.16+)
+| Herramienta | Linux | Windows |
+|---|---|---|
+| Compilador C++17 | g++ ≥ 9 o clang++ ≥ 10 | Visual Studio 2019+ (MSVC) o MinGW-w64 |
+| Construcción | `make` (o CMake ≥ 3.16) | CMake ≥ 3.16 |
+| Git | cualquiera | cualquiera |
 
-## Compilar en el directorio local
+No se usan bibliotecas externas.
 
-```
-make
-```
-Los binarios quedan en `bin/`.
+## Linux (Ubuntu / Debian)
 
-## Instalar en un directorio distinto
+```sh
+sudo apt update && sudo apt install -y git g++ make cmake
+git clone https://github.com/mariaaanahincapie/Proyecto_sistemas_operativos-.git
+cd Proyecto_sistemas_operativos-/evaluador
+make              # bin/evaluator, bin/evaluator-init, -reg, -ctrl, -rep
+make test         # opcional: pruebas automáticas
+```
 
-```
-make install PREFIX=/ruta/destino
-```
-Copia los programas a `/ruta/destino/bin`. Para usarlos, agrega esa carpeta al `PATH`:
+Con CMake: `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build` (los ejecutables quedan igualmente en `bin/`).
 
-```
-export PATH=/ruta/destino/bin:$PATH
-```
-El wrapper `evaluator` busca los programas reales en su propia carpeta, o en la indicada por `EVALUATOR_BIN`.
+## Windows (PowerShell)
 
-## Con CMake
+Desde la carpeta `evaluador`, en una terminal con el compilador disponible ("Developer PowerShell for VS" si usa MSVC):
 
-```
+```powershell
 cmake -S . -B build
-cmake --build build
+cmake --build build --config Release
+.\bin\evaluator.exe init -i 3
 ```
 
-## Estado actual
+Con MinGW: `cmake -S . -B build -G "MinGW Makefiles"` y luego `cmake --build build`.
+Abra una terminal por cada comando (`init`, `reg`, `ctrl`, `rep`). En `ctrl` y en `reg -`, el fin de archivo es **Ctrl+Z y Enter**.
 
-Primera entrega (diseño): todavía no hay código compilable.
+## Instalar en un directorio distinto al local
+
+Linux:
+```sh
+make install PREFIX=/opt/evaluador        # copia los 5 programas a /opt/evaluador/bin
+export PATH=/opt/evaluador/bin:$PATH
+evaluator init
+```
+
+Con CMake (Linux o Windows):
+```sh
+cmake --install build --prefix /ruta/destino
+```
+
+El wrapper `evaluator` busca los programas reales en **su propia carpeta**; si se instalan en carpetas distintas, indique dónde están con `EVALUATOR_BIN=/ruta/a/los/programas`.
+
+## Si algo falla
+
+| Síntoma | Causa / solución |
+|---|---|
+| `init: el sistema "evaluator" ya está iniciado` | Hay otro `init` vivo con ese nombre. Ciérrelo (Ctrl+C) o use `-n otro`. |
+| `reg/ctrl/rep: no está iniciado` (código 2) | Primero `evaluator init` (con el mismo `-n`). |
+| `init` murió con `kill -9` | En Linux basta ejecutar `init` de nuevo: detecta que el pid ya no existe y borra el segmento huérfano. A mano: `rm /dev/shm/evaluator`. |
+| Windows: "quedan procesos conectados" | Cierre los `reg`/`ctrl`/`rep` que sigan abiertos con ese nombre. |
